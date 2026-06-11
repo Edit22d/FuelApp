@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuel Connect | Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* ── THEME TOKENS ── */
+        :root[data-theme="dark"] {
+            --bg-color:        #0D0D0D;
+            --card-color:      #1A1A1A;
+            --sidebar-color:   #111111;
+            --accent-color:    #C4963D;
+            --accent-hover:    #E8B560;
+            --text-primary:    #FFFFFF;
+            --text-secondary:  #A0A0A0;
+            --text-muted:      #555555;
+            --border-color:    #2A2A2A;
+            --glass-bg:        rgba(26,26,26,0.75);
+            --glass-border:    rgba(255,255,255,0.06);
+            --success-color:   #00C853;
+            --warning-color:   #C4963D;
+            --info-color:      #00B0FF;
+            --danger-color:    #FF1744;
+            --input-bg:        rgba(255,255,255,0.04);
+            --hover-bg:        rgba(255,255,255,0.05);
+            --shadow:          0 8px 32px rgba(0,0,0,0.4);
+        }
+
+        :root[data-theme="light"] {
+            --bg-color:        #F0F2F5;
+            --card-color:      #FFFFFF;
+            --sidebar-color:   #FFFFFF;
+            --accent-color:    #C4963D;
+            --accent-hover:    #A87B2A;
+            --text-primary:    #111111;
+            --text-secondary:  #555555;
+            --text-muted:      #999999;
+            --border-color:    #E0E0E0;
+            --glass-bg:        rgba(255,255,255,0.9);
+            --glass-border:    rgba(0,0,0,0.06);
+            --success-color:   #00A846;
+            --warning-color:   #C4963D;
+            --info-color:      #0088CC;
+            --danger-color:    #D50000;
+            --input-bg:        rgba(0,0,0,0.04);
+            --hover-bg:        rgba(0,0,0,0.04);
+            --shadow:          0 4px 24px rgba(0,0,0,0.1);
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Outfit',sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            overflow-x: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* ═══════════════════ SIDEBAR ═══════════════════ */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-color);
+            border-right: 1px solid var(--border-color);
+            height: 100vh;
+            position: fixed;
+            left: 0; top: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 14px 14px;
+            z-index: 100;
+            transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+            box-shadow: 2px 0 20px rgba(0,0,0,0.15);
+        }
+
+        .sidebar-logo {
+            display: flex; align-items: center; gap: 12px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 6px;
+            padding-left: 6px;
+        }
+        .sidebar-logo i { font-size: 28px; color: var(--accent-color); animation: pulse 2s infinite alternate; }
+        .sidebar-logo span {
+            font-size: 19px; font-weight: 800; letter-spacing: 0.5px;
+            background: linear-gradient(135deg, var(--text-primary) 30%, var(--accent-color) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar-nav { flex-grow:1; overflow-y:auto; overflow-x:hidden; scrollbar-width:none; padding-bottom:8px; }
+        .sidebar-nav::-webkit-scrollbar { display:none; }
+
+        .sidebar-menu { list-style:none; display:flex; flex-direction:column; gap:1px; }
+
+        .sidebar-group-label {
+            font-size: 10px; font-weight: 700; letter-spacing: 2px;
+            text-transform: uppercase; color: var(--text-muted);
+            padding: 14px 10px 5px; display: block;
+        }
+
+        .sidebar-divider { height:1px; background:var(--border-color); margin:6px 4px; }
+
+        .sidebar-menu-item a {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 12px; color: var(--text-secondary);
+            text-decoration: none; border-radius: 10px;
+            font-weight: 500; font-size: 13.5px;
+            transition: all 0.2s ease; position: relative;
+        }
+        .sidebar-menu-item a i { font-size: 18px; flex-shrink: 0; }
+        .sidebar-menu-item a:hover {
+            color: var(--text-primary);
+            background-color: var(--hover-bg);
+            transform: translateX(3px);
+        }
+        .sidebar-menu-item.active a {
+            color: #000;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            font-weight: 600;
+            box-shadow: 0 4px 14px rgba(196,150,61,0.35);
+        }
+        .sidebar-menu-item.active a i { color: #000; }
+
+        /* badge on sidebar items */
+        .sidebar-badge {
+            margin-left: auto; background: var(--danger-color);
+            color: #fff; font-size: 10px; font-weight: 700;
+            padding: 2px 6px; border-radius: 10px; line-height: 1.4;
+        }
+
+        .sidebar-footer { padding-top: 12px; border-top: 1px solid var(--border-color); }
+        .sidebar-footer-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 12px; color: #FF5252; cursor: pointer;
+            border-radius: 10px; transition: all 0.2s ease;
+            font-size: 13.5px; font-weight: 500;
+        }
+        .sidebar-footer-item:hover { background: rgba(255,82,82,0.1); }
+
+        /* ═══════════════════ MAIN CONTENT ═══════════════════ */
+        .main-content {
+            margin-left: 260px;
+            width: calc(100% - 260px);
+            min-height: 100vh;
+            padding: 28px 32px;
+            display: flex; flex-direction: column; gap: 28px;
+        }
+
+        /* ═══════════════════ HEADER ═══════════════════ */
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-bottom: 20px; border-bottom: 1px solid var(--border-color);
+        }
+        .header-title h1 { font-size: 24px; font-weight: 700; margin-bottom: 3px; }
+        .header-title p { color: var(--text-secondary); font-size: 13px; }
+
+        .header-actions { display: flex; align-items: center; gap: 12px; }
+
+        /* Theme toggle */
+        .theme-toggle-btn {
+            width: 40px; height: 40px; border-radius: 10px;
+            background: var(--card-color); border: 1px solid var(--border-color);
+            color: var(--text-secondary); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; transition: all 0.2s;
+        }
+        .theme-toggle-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
+
+        /* Notification bell */
+        .notif-btn {
+            position: relative; width: 40px; height: 40px; border-radius: 10px;
+            background: var(--card-color); border: 1px solid var(--border-color);
+            color: var(--text-secondary); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; transition: all 0.2s; text-decoration: none;
+        }
+        .notif-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
+        .notif-badge {
+            position: absolute; top: -4px; right: -4px;
+            background: var(--danger-color); color: #fff;
+            font-size: 10px; font-weight: 700; width: 18px; height: 18px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            border: 2px solid var(--bg-color);
+        }
+
+        .header-profile { display: flex; align-items: center; gap: 10px; padding-left: 12px; border-left: 1px solid var(--border-color); }
+        .profile-avatar {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            color: #000; display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 15px;
+            box-shadow: 0 0 12px rgba(196,150,61,0.3);
+        }
+        .profile-info { display:flex; flex-direction:column; }
+        .profile-name { font-size: 13px; font-weight: 600; }
+        .profile-role { font-size: 11px; color: var(--text-secondary); }
+
+        /* ═══════════════════ GLASS CARD ═══════════════════ */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px; padding: 24px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+        }
+        .glass-card:hover { border-color: rgba(196,150,61,0.18); }
+
+        /* ═══════════════════ TABLES ═══════════════════ */
+        .table-container { width:100%; overflow-x:auto; }
+        .custom-table { width:100%; border-collapse:collapse; text-align:left; }
+        .custom-table th { padding:14px 16px; color:var(--text-secondary); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--border-color); }
+        .custom-table td { padding:14px 16px; font-size:14px; border-bottom:1px solid var(--border-color); color:var(--text-primary); }
+        .custom-table tr:last-child td { border-bottom:none; }
+        .custom-table tr:hover td { background:var(--hover-bg); }
+
+        /* ═══════════════════ STATUS BADGES ═══════════════════ */
+        .status-badge { padding:5px 12px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; display:inline-flex; align-items:center; gap:6px; }
+        .status-badge::before { content:''; width:6px; height:6px; border-radius:50%; }
+        .status-delivered  { background:rgba(0,200,83,0.12);  color:var(--success-color); }
+        .status-delivered::before { background:var(--success-color); }
+        .status-pending    { background:rgba(196,150,61,0.12); color:var(--warning-color); }
+        .status-pending::before { background:var(--warning-color); }
+        .status-ongoing    { background:rgba(0,176,255,0.12);  color:var(--info-color); }
+        .status-ongoing::before { background:var(--info-color); }
+        .status-cancelled  { background:rgba(255,23,68,0.12);  color:var(--danger-color); }
+        .status-cancelled::before { background:var(--danger-color); }
+
+        /* ═══════════════════ ANIMATIONS ═══════════════════ */
+        @keyframes pulse {
+            0%   { transform:scale(1);    filter:drop-shadow(0 0 2px rgba(196,150,61,0.5)); }
+            100% { transform:scale(1.06); filter:drop-shadow(0 0 10px rgba(196,150,61,0.9)); }
+        }
+        .fade-in { animation:fadeIn 0.5s cubic-bezier(0.4,0,0.2,1) forwards; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
+
+        /* ═══════════════════ RESPONSIVE ═══════════════════ */
+        @media (max-width:992px) {
+            .sidebar { width:68px; padding:14px 8px; }
+            .sidebar-logo span, .sidebar-menu-item a span,
+            .sidebar-footer-item span, .sidebar-group-label, .sidebar-divider { display:none; }
+            .sidebar-logo { justify-content:center; padding-left:0; }
+            .sidebar-menu-item a { justify-content:center; padding:12px; gap:0; }
+            .sidebar-footer-item { justify-content:center; gap:0; padding:12px; }
+            .sidebar-badge { display:none; }
+            .main-content { margin-left:68px; width:calc(100% - 68px); padding:18px; }
+            .profile-info { display:none; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- ══════════════════ SIDEBAR ══════════════════ -->
+    <div class="sidebar">
+        <div class="sidebar-logo">
+            <i class='bx bxs-gas-pump'></i>
+            <span>Fuel Connect</span>
+        </div>
+
+        <nav class="sidebar-nav">
+
+            <!-- OVERVIEW -->
+            <span class="sidebar-group-label">Overview</span>
+            <ul class="sidebar-menu">
+                <li class="sidebar-menu-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <a href="{% url 'dashboard_home' %}">
+                        <i class='bx bxs-dashboard'></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-divider"></div>
+
+            <!-- OPERATIONAL -->
+            <span class="sidebar-group-label">Operational</span>
+            <ul class="sidebar-menu">
+                <li class="sidebar-menu-item {% if active_page == 'orders' %}active{% endif %}">
+                    <a href="{% url 'dashboard_orders' %}">
+                        <i class='bx bx-receipt'></i>
+                        <span>Orders</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item {% if active_page == 'stations' %}active{% endif %}">
+                    <a href="{% url 'dashboard_stations' %}">
+                        <i class='bx bx-gas-pump'></i>
+                        <span>Fuel Stations</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item {% if active_page == 'payments' %}active{% endif %}">
+                    <a href="{% url 'dashboard_payments' %}">
+                        <i class='bx bx-credit-card'></i>
+                        <span>Payments</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item {% if active_page == 'vehicles' %}active{% endif %}">
+                    <a href="{% url 'dashboard_vehicles' %}">
+                        <i class='bx bx-car'></i>
+                        <span>Vehicles</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-divider"></div>
+
+            <!-- COMMUNITY -->
+            <span class="sidebar-group-label">Community</span>
+            <ul class="sidebar-menu">
+                <li class="sidebar-menu-item {% if active_page == 'delivery_agents' %}active{% endif %}">
+                    <a href="{% url 'dashboard_delivery_agents' %}">
+                        <i class='bx bx-cycling'></i>
+                        <span>Delivery Agents</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item {% if active_page == 'contact_messages' %}active{% endif %}">
+                    <a href="{% url 'dashboard_contact_messages' %}">
+                        <i class='bx bx-envelope'></i>
+                        <span>Contact Messages</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-divider"></div>
+
+            <!-- ADMINISTRATION -->
+            <span class="sidebar-group-label">Administration</span>
+            <ul class="sidebar-menu">
+                <li class="sidebar-menu-item {% if active_page == 'users' %}active{% endif %}">
+                    <a href="{% url 'dashboard_users' %}">
+                        <i class='bx bx-group'></i>
+                        <span>Users &amp; Staff</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item {% if active_page == 'activity_logs' %}active{% endif %}">
+                    <a href="{% url 'dashboard_activity_logs' %}">
+                        <i class='bx bx-list-ul'></i>
+                        <span>Activity Logs</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-divider"></div>
+
+            <!-- MY ACCOUNT -->
+            <span class="sidebar-group-label">My Account</span>
+            <ul class="sidebar-menu">
+                <li class="sidebar-menu-item {% if active_page == 'notifications' %}active{% endif %}">
+                    <a href="{% url 'dashboard_notifications' %}">
+                        <i class='bx bx-bell'></i>
+                        <span>Notifications</span>
+                        {% if unread_notifications_count > 0 %}
+                        <span class="sidebar-badge">{{ unread_notifications_count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li class="sidebar-menu-item {% if active_page == 'profile' %}active{% endif %}">
+                    <a href="{% url 'dashboard_profile' %}">
+                        <i class='bx bx-user-circle'></i>
+                        <span>Profile</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item {% if active_page == 'security' %}active{% endif %}">
+                    <a href="{% url 'dashboard_security' %}">
+                        <i class='bx bx-shield-alt-2'></i>
+                        <span>Security</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item {% if active_page == 'settings' %}active{% endif %}">
+                    <a href="{% url 'dashboard_settings' %}">
+                        <i class='bx bx-cog'></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+
+        </nav>
+
+        <!-- Footer -->
+        <div class="sidebar-footer">
+            <div class="sidebar-footer-item" onclick="location.href='{% url 'dashboard_logout' %}'">
+                <i class='bx bx-log-out'></i>
+                <span>Sign Out</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ MAIN BODY ══════════════════ -->
+    <div class="main-content">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-title">
+                <h1>{% block header_title %}Overview{% endblock %}</h1>
+                <p>{% block header_subtitle %}Real-time insights and stats{% endblock %}</p>
+            </div>
+            <div class="header-actions">
+                <!-- Theme Toggle -->
+                <button class="theme-toggle-btn" id="theme-toggle" title="Toggle Theme" onclick="toggleTheme()">
+                    <i class='bx bx-sun' id="theme-icon"></i>
+                </button>
+                <!-- Notifications Bell -->
+                <a href="{% url 'dashboard_notifications' %}" class="notif-btn" title="Notifications">
+                    <i class='bx bx-bell'></i>
+                    {% if unread_notifications_count > 0 %}
+                    <span class="notif-badge">{{ unread_notifications_count }}</span>
+                    {% endif %}
+                </a>
+                <!-- Profile -->
+                <div class="header-profile">
+                    <div class="profile-avatar">{{ admin_initial|default:"A" }}</div>
+                    <div class="profile-info">
+                        <span class="profile-name">{{ admin_name|default:"Administrator" }}</span>
+                        <span class="profile-role">Fuel Connect Staff</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENT -->
+        {% block content %}{% endblock %}
+    </div>
+
+    <script>
+        // ── THEME MANAGEMENT ──
+        (function() {
+            const saved = localStorage.getItem('fc_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+            updateThemeIcon(saved);
+        })();
+
+        function updateThemeIcon(theme) {
+            const icon = document.getElementById('theme-icon');
+            if (!icon) return;
+            icon.className = theme === 'dark' ? 'bx bx-sun' : 'bx bx-moon';
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next    = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('fc_theme', next);
+            updateThemeIcon(next);
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

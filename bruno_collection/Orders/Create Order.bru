@@ -1,0 +1,23 @@
+meta {
+  name: Create Order
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/orders/
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "station": 1,
+    "fuel_type": "Petrol 98",
+    "quantity": 50.0
+  }
+}

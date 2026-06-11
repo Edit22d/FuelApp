@@ -1,0 +1,15 @@
+meta {
+  name: Cancel Order
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/orders/1/cancel/
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

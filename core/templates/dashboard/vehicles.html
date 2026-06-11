@@ -1,0 +1,186 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header_title %}Vehicles{% endblock %}
+{% block header_subtitle %}Registered vehicles across the platform{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
+.search-box{display:flex;align-items:center;gap:10px;background:var(--input-bg);border:1px solid var(--border-color);border-radius:10px;padding:0 14px;flex:1;min-width:220px;transition:border-color 0.2s;}
+.search-box:focus-within{border-color:var(--accent-color);}
+.search-box i{color:var(--text-muted);font-size:18px;}
+.search-box input{background:transparent;border:none;outline:none;color:var(--text-primary);font-family:'Outfit',sans-serif;font-size:14px;padding:11px 0;width:100%;}
+.search-box input::placeholder{color:var(--text-muted);}
+.filter-select{background:var(--input-bg);border:1px solid var(--border-color);border-radius:10px;padding:10px 14px;color:var(--text-primary);font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer;outline:none;min-width:150px;}
+.filter-select:focus{border-color:var(--accent-color);}
+.filter-select option{background:var(--card-color);}
+.action-btns{display:flex;align-items:center;gap:6px;}
+.icon-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border-color);background:var(--input-bg);cursor:pointer;transition:all 0.2s;font-size:16px;}
+.icon-btn.view{color:var(--text-secondary);}.icon-btn.view:hover{background:var(--hover-bg);border-color:var(--text-secondary);}
+.icon-btn.edit{color:var(--info-color);}.icon-btn.edit:hover{background:rgba(0,176,255,0.12);border-color:var(--info-color);}
+.icon-btn.del{color:var(--danger-color);}.icon-btn.del:hover{background:rgba(255,23,68,0.12);border-color:var(--danger-color);}
+.badge-active{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(0,200,83,0.12);color:var(--success-color);}
+.badge-inactive{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(160,160,160,0.1);color:var(--text-muted);}
+.badge-suspended{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(255,23,68,0.12);color:var(--danger-color);}
+.vehicle-icon-wrap{width:36px;height:36px;border-radius:10px;background:var(--input-bg);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--accent-color);flex-shrink:0;}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 0;color:var(--text-muted);}
+.empty-state i{font-size:48px;margin-bottom:12px;}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:999;align-items:center;justify-content:center;}
+.modal-overlay.active{display:flex;}
+.modal-box{background:var(--card-color);border:1px solid var(--border-color);border-radius:16px;padding:28px;width:100%;max-width:480px;animation:fadeIn 0.2s ease;max-height:90vh;overflow-y:auto;}
+.modal-box h3{font-size:17px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:13px;color:var(--text-secondary);margin-bottom:6px;font-weight:500;}
+.form-group input,.form-group select{width:100%;background:var(--input-bg);border:1px solid var(--border-color);border-radius:8px;padding:10px 14px;color:var(--text-primary);font-family:'Outfit',sans-serif;font-size:14px;outline:none;}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent-color);}
+.form-group select option{background:var(--card-color);}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
+.btn-cancel{padding:10px 20px;border-radius:8px;border:1px solid var(--border-color);background:transparent;color:var(--text-secondary);font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer;}
+.btn-save{padding:10px 24px;border-radius:8px;border:none;background:var(--accent-color);color:#000;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+.btn-add{display:inline-flex;align-items:center;gap:8px;background:var(--accent-color);color:#000;border:none;border-radius:10px;padding:10px 18px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.btn-add:hover{background:var(--accent-hover);}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="glass-card fade-in">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h2 style="font-size:17px;font-weight:700;">Vehicle Registry
+            <span style="font-size:13px;color:var(--text-muted);font-weight:400;margin-left:8px;" id="v-count">({{ vehicles|length }})</span>
+        </h2>
+        <button class="btn-add" onclick="openModal('add-vehicle-modal')">
+            <i class='bx bx-plus'></i> Register Vehicle
+        </button>
+    </div>
+
+    <div class="page-toolbar">
+        <div class="search-box">
+            <i class='bx bx-search'></i>
+            <input type="text" id="v-search" placeholder="Search plate number, owner, type..." oninput="filterVehicles()">
+        </div>
+        <select class="filter-select" id="type-filter" onchange="filterVehicles()">
+            <option value="">All Types</option>
+            <option>Heavy Truck</option>
+            <option>Fuel Tanker</option>
+            <option>Boda Boda (Motorcycle)</option>
+            <option>Pickup Truck</option>
+            <option>Saloon Car</option>
+            <option>Van</option>
+        </select>
+        <select class="filter-select" id="vstatus-filter" onchange="filterVehicles()">
+            <option value="">All Statuses</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+            <option value="SUSPENDED">Suspended</option>
+        </select>
+    </div>
+
+    <div class="table-container">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Vehicle</th>
+                    <th>Plate Number</th>
+                    <th>Owner</th>
+                    <th>License No.</th>
+                    <th>Make/Model</th>
+                    <th>Status</th>
+                    <th>Registered</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="v-tbody">
+                {% for v in vehicles %}
+                <tr data-search="{{ v.vehicle_number|lower }} {{ v.owner.full_name|lower }} {{ v.vehicle_type|lower }}"
+                    data-type="{{ v.vehicle_type }}"
+                    data-vstatus="{{ v.status }}">
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="vehicle-icon-wrap">
+                                {% if 'Truck' in v.vehicle_type or 'Tanker' in v.vehicle_type %}<i class='bx bx-trip'></i>
+                                {% elif 'Boda' in v.vehicle_type %}<i class='bx bx-cycling'></i>
+                                {% else %}<i class='bx bx-car'></i>{% endif %}
+                            </div>
+                            <div>
+                                <div style="font-weight:600;font-size:13px;">{{ v.vehicle_type }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><strong style="color:var(--accent-color);font-family:monospace;">{{ v.vehicle_number }}</strong></td>
+                    <td>
+                        <div style="font-weight:600;">{{ v.owner.full_name }}</div>
+                        <div style="font-size:11px;color:var(--text-secondary);">{{ v.owner.phone_number }}</div>
+                    </td>
+                    <td style="font-size:12px;color:var(--text-secondary);">{{ v.license_number|default:"—" }}</td>
+                    <td style="font-size:13px;color:var(--text-secondary);">{{ v.make_model|default:"—" }}</td>
+                    <td>
+                        {% if v.status == 'ACTIVE' %}<span class="badge-active">Active</span>
+                        {% elif v.status == 'INACTIVE' %}<span class="badge-inactive">Inactive</span>
+                        {% else %}<span class="badge-suspended">Suspended</span>{% endif %}
+                    </td>
+                    <td style="color:var(--text-secondary);font-size:12px;">{{ v.registered_at|date:'M d, Y' }}</td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="icon-btn edit" title="Edit"><i class='bx bx-edit-alt'></i></button>
+                            <button class="icon-btn del" title="Remove"><i class='bx bx-trash'></i></button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8">
+                    <div class="empty-state">
+                        <i class='bx bx-car'></i>
+                        <p>No vehicles registered yet.</p>
+                    </div>
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div id="no-results-v" style="display:none;text-align:center;padding:32px;color:var(--text-muted);">
+        <i class='bx bx-search-alt' style="font-size:32px;display:block;margin-bottom:8px;"></i>No vehicles match your search.
+    </div>
+</div>
+
+<!-- Add Vehicle Modal -->
+<div class="modal-overlay" id="add-vehicle-modal">
+    <div class="modal-box">
+        <h3><i class='bx bx-car' style="color:var(--accent-color);"></i> Register New Vehicle</h3>
+        <div class="form-group"><label>Vehicle Type</label>
+            <select><option>Heavy Truck</option><option>Fuel Tanker</option><option>Boda Boda (Motorcycle)</option><option>Pickup Truck</option><option>Saloon Car</option><option>Van</option></select>
+        </div>
+        <div class="form-group"><label>Plate Number</label><input type="text" placeholder="e.g. UBA 998F"></div>
+        <div class="form-group"><label>Owner (Driver Phone)</label><input type="text" placeholder="e.g. 0781234567"></div>
+        <div class="form-group"><label>License Number</label><input type="text" placeholder="e.g. DL-998877"></div>
+        <div class="form-group"><label>Make / Model</label><input type="text" placeholder="e.g. Toyota Hilux 2022"></div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('add-vehicle-modal')">Cancel</button>
+            <button class="btn-save"><i class='bx bx-check'></i> Register</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function openModal(id){document.getElementById(id).classList.add('active');}
+function closeModal(id){document.getElementById(id).classList.remove('active');}
+document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('active');});});
+
+function filterVehicles(){
+    const q=document.getElementById('v-search').value.toLowerCase();
+    const t=document.getElementById('type-filter').value;
+    const s=document.getElementById('vstatus-filter').value;
+    const rows=document.querySelectorAll('#v-tbody tr[data-search]');
+    let vis=0;
+    rows.forEach(r=>{
+        const mQ=!q||r.dataset.search.includes(q);
+        const mT=!t||r.dataset.type===t;
+        const mS=!s||r.dataset.vstatus===s;
+        r.style.display=(mQ&&mT&&mS)?'':'none';
+        if(mQ&&mT&&mS)vis++;
+    });
+    document.getElementById('v-count').textContent=`(${vis})`;
+    document.getElementById('no-results-v').style.display=vis===0?'block':'none';
+}
+</script>
+{% endblock %}

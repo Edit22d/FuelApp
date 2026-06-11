@@ -1,0 +1,198 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header_title %}Contact Messages{% endblock %}
+{% block header_subtitle %}Inbox of support and enquiry messages from users{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
+.search-box{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border-color);border-radius:10px;padding:0 14px;flex:1;min-width:220px;transition:border-color 0.2s;}
+.search-box:focus-within{border-color:var(--accent-color);}
+.search-box i{color:var(--text-muted);font-size:18px;}
+.search-box input{background:transparent;border:none;outline:none;color:var(--text-primary);font-family:'Outfit',sans-serif;font-size:14px;padding:11px 0;width:100%;}
+.search-box input::placeholder{color:var(--text-muted);}
+.filter-select{background:rgba(255,255,255,0.04);border:1px solid var(--border-color);border-radius:10px;padding:10px 14px;color:var(--text-primary);font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer;outline:none;min-width:140px;}
+.filter-select:focus{border-color:var(--accent-color);}
+.filter-select option{background:#1A1A1A;}
+.action-btns{display:flex;align-items:center;gap:6px;}
+.icon-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border-color);background:rgba(255,255,255,0.03);cursor:pointer;transition:all 0.2s;font-size:16px;}
+.icon-btn.edit{color:var(--info-color);}.icon-btn.edit:hover{background:rgba(0,176,255,0.12);border-color:var(--info-color);}
+.icon-btn.del{color:var(--danger-color);}.icon-btn.del:hover{background:rgba(255,23,68,0.12);border-color:var(--danger-color);}
+.icon-btn.view{color:var(--text-secondary);}.icon-btn.view:hover{background:rgba(255,255,255,0.06);border-color:var(--text-secondary);}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:999;align-items:center;justify-content:center;}
+.modal-overlay.active{display:flex;}
+.modal-box{background:#1E1E1E;border:1px solid var(--border-color);border-radius:16px;padding:28px;width:100%;max-width:520px;animation:fadeIn 0.2s ease;max-height:90vh;overflow-y:auto;}
+.modal-box h3{font-size:18px;font-weight:700;margin-bottom:20px;}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:13px;color:var(--text-secondary);margin-bottom:6px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border-color);border-radius:8px;padding:10px 14px;color:var(--text-primary);font-family:'Outfit',sans-serif;font-size:14px;outline:none;resize:vertical;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent-color);}
+.form-group select option{background:#1A1A1A;}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
+.btn-cancel{padding:10px 20px;border-radius:8px;border:1px solid var(--border-color);background:transparent;color:var(--text-secondary);font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer;}
+.btn-save{padding:10px 20px;border-radius:8px;border:none;background:var(--accent-color);color:#000;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer;}
+.record-count{font-size:13px;color:var(--text-muted);}
+.msg-preview{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary);font-size:13px;}
+.badge-read{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(0,200,83,0.12);color:var(--success-color);}
+.badge-unread{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(196,150,61,0.15);color:var(--accent-color);}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="glass-card fade-in">
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h2 style="font-size:18px;font-weight:700;">Contact Messages
+            <span class="record-count" id="msg-count">({{ messages|length }})</span>
+        </h2>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="page-toolbar">
+        <div class="search-box">
+            <i class='bx bx-search'></i>
+            <input type="text" id="msg-search" placeholder="Search sender name, email, subject..." oninput="filterMessages()">
+        </div>
+        <select class="filter-select" id="read-filter" onchange="filterMessages()">
+            <option value="">All Messages</option>
+            <option value="read">Read</option>
+            <option value="unread">Unread</option>
+        </select>
+    </div>
+
+    <!-- Table -->
+    <div class="table-container">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Sender</th>
+                    <th>Email / Phone</th>
+                    <th>Subject</th>
+                    <th>Message Preview</th>
+                    <th>Received</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="messages-tbody">
+                {% for msg in messages %}
+                <tr data-search="{{ msg.sender_name|lower }} {{ msg.email|lower }} {{ msg.subject|lower }}"
+                    data-read="{% if msg.is_read %}read{% else %}unread{% endif %}">
+                    <td><strong>{{ msg.sender_name }}</strong></td>
+                    <td>
+                        <div>{{ msg.email }}</div>
+                        <div style="font-size:12px;color:var(--text-secondary);">{{ msg.phone|default:"—" }}</div>
+                    </td>
+                    <td style="font-weight:500;">{{ msg.subject }}</td>
+                    <td><div class="msg-preview">{{ msg.body }}</div></td>
+                    <td style="color:var(--text-secondary);font-size:12px;">{{ msg.created_at|date:"M d, Y · H:i" }}</td>
+                    <td>
+                        {% if msg.is_read %}
+                        <span class="badge-read">Read</span>
+                        {% else %}
+                        <span class="badge-unread">Unread</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="icon-btn view" title="Read Message"
+                                onclick="readMessage('{{ msg.sender_name }}','{{ msg.email }}','{{ msg.subject }}','{{ msg.body|escapejs }}','{{ msg.created_at|date:'M d, Y' }}')">
+                                <i class='bx bx-envelope-open'></i>
+                            </button>
+                            <button class="icon-btn edit" title="Reply" onclick="openModal('reply-modal')">
+                                <i class='bx bx-reply'></i>
+                            </button>
+                            <button class="icon-btn del" title="Delete" onclick="openModal('delete-msg-modal')">
+                                <i class='bx bx-trash'></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align:center;color:var(--text-muted);padding:48px 0;">
+                        <i class='bx bx-envelope' style="font-size:40px;display:block;margin-bottom:10px;"></i>
+                        No contact messages yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div id="no-results-msgs" style="display:none;text-align:center;padding:32px;color:var(--text-muted);">
+        <i class='bx bx-search-alt' style="font-size:32px;display:block;margin-bottom:8px;"></i>No messages match your search.
+    </div>
+</div>
+
+<!-- ── READ MESSAGE MODAL ── -->
+<div class="modal-overlay" id="read-modal">
+    <div class="modal-box" style="max-width:560px;">
+        <h3><i class='bx bx-envelope-open' style="color:var(--accent-color)"></i> Message</h3>
+        <div id="read-msg-meta" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border-color);font-size:13px;color:var(--text-secondary);"></div>
+        <div id="read-msg-body" style="font-size:14px;color:var(--text-primary);line-height:1.8;white-space:pre-wrap;"></div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('read-modal')">Close</button>
+            <button class="btn-save" onclick="closeModal('read-modal');openModal('reply-modal')"><i class='bx bx-reply'></i> Reply</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── REPLY MODAL ── -->
+<div class="modal-overlay" id="reply-modal">
+    <div class="modal-box">
+        <h3><i class='bx bx-reply' style="color:var(--info-color)"></i> Send Reply</h3>
+        <div class="form-group"><label>To (Email)</label><input type="email" id="reply-to" placeholder="user@email.com"></div>
+        <div class="form-group"><label>Subject</label><input type="text" id="reply-subject" placeholder="Re: ..."></div>
+        <div class="form-group"><label>Message</label><textarea rows="5" placeholder="Type your reply..."></textarea></div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('reply-modal')">Cancel</button>
+            <button class="btn-save"><i class='bx bx-send'></i> Send Reply</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── DELETE CONFIRM ── -->
+<div class="modal-overlay" id="delete-msg-modal">
+    <div class="modal-box" style="max-width:380px;text-align:center;">
+        <i class='bx bx-error-circle' style="font-size:48px;color:var(--danger-color);margin-bottom:12px;display:block;"></i>
+        <h3>Delete Message?</h3>
+        <p style="color:var(--text-secondary);font-size:14px;margin:10px 0 20px;">This message will be permanently deleted.</p>
+        <div class="modal-footer" style="justify-content:center;">
+            <button class="btn-cancel" onclick="closeModal('delete-msg-modal')">Cancel</button>
+            <button class="btn-save" style="background:var(--danger-color);">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function openModal(id){document.getElementById(id).classList.add('active');}
+function closeModal(id){document.getElementById(id).classList.remove('active');}
+document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('active');});});
+
+function readMessage(name,email,subject,body,date){
+    document.getElementById('read-msg-meta').innerHTML=
+        `<strong style="color:var(--text-primary)">${name}</strong> &lt;${email}&gt;
+         <span style="float:right">${date}</span><br>
+         <span style="color:var(--text-muted)">Subject:</span> <strong style="color:var(--text-primary)">${subject}</strong>`;
+    document.getElementById('read-msg-body').textContent=body;
+    document.getElementById('reply-to').value=email;
+    document.getElementById('reply-subject').value='Re: '+subject;
+    openModal('read-modal');
+}
+
+function filterMessages(){
+    const q=document.getElementById('msg-search').value.toLowerCase();
+    const r=document.getElementById('read-filter').value;
+    const rows=document.querySelectorAll('#messages-tbody tr[data-search]');
+    let vis=0;
+    rows.forEach(row=>{
+        const mQ=!q||row.dataset.search.includes(q);
+        const mR=!r||row.dataset.read===r;
+        row.style.display=(mQ&&mR)?'':'none';
+        if(mQ&&mR)vis++;
+    });
+    document.getElementById('msg-count').textContent=`(${vis})`;
+    document.getElementById('no-results-msgs').style.display=vis===0?'block':'none';
+}
+</script>
+{% endblock %}

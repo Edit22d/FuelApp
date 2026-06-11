@@ -1,0 +1,346 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header_title %}Settings{% endblock %}
+{% block header_subtitle %}Customize your dashboard appearance and preferences{% endblock %}
+
+{% block extra_css %}
+<style>
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+.set-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:16px;padding:26px;}
+.set-card-title{font-size:16px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+.set-card-sub{font-size:13px;color:var(--text-secondary);margin-bottom:24px;}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border-color);}
+.setting-row:last-child{border-bottom:none;padding-bottom:0;}
+.setting-info{}
+.setting-label{font-size:14px;font-weight:600;margin-bottom:3px;}
+.setting-desc{font-size:12px;color:var(--text-secondary);}
+/* Toggle switch */
+.toggle-switch{position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;}
+.toggle-switch input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:var(--border-color);border-radius:26px;transition:0.3s;}
+.toggle-slider::before{content:'';position:absolute;width:20px;height:20px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.3s;}
+.toggle-switch input:checked + .toggle-slider{background:var(--accent-color);}
+.toggle-switch input:checked + .toggle-slider::before{transform:translateX(22px);}
+/* Theme cards */
+.theme-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;}
+.theme-card{border:2px solid var(--border-color);border-radius:12px;padding:14px;cursor:pointer;transition:all 0.2s;text-align:center;}
+.theme-card:hover{border-color:var(--accent-color);}
+.theme-card.selected{border-color:var(--accent-color);background:rgba(196,150,61,0.07);}
+.theme-card i{font-size:28px;margin-bottom:8px;display:block;}
+.theme-card span{font-size:13px;font-weight:600;}
+/* Accent color picker */
+.accent-options{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;}
+.accent-swatch{width:32px;height:32px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all 0.2s;position:relative;}
+.accent-swatch:hover,.accent-swatch.active{border-color:var(--text-primary);transform:scale(1.15);}
+.accent-swatch.active::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#000;font-size:14px;font-weight:800;}
+/* Font size */
+.font-options{display:flex;gap:8px;margin-top:4px;}
+.font-btn{padding:7px 16px;border-radius:8px;border:1px solid var(--border-color);background:transparent;color:var(--text-secondary);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:all 0.2s;}
+.font-btn.active{background:var(--accent-color);color:#000;border-color:var(--accent-color);font-weight:600;}
+.btn-save-settings{display:inline-flex;align-items:center;gap:8px;background:var(--accent-color);color:#000;border:none;border-radius:10px;padding:11px 24px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;margin-top:20px;}
+.btn-save-settings:hover{background:var(--accent-hover);}
+@media(max-width:900px){.settings-grid{grid-template-columns:1fr;}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-grid fade-in">
+
+    <!-- ── Appearance ── -->
+    <div class="set-card">
+        <div class="set-card-title">
+            <i class='bx bx-palette' style="color:var(--accent-color);font-size:22px;"></i>
+            Appearance
+        </div>
+        <p class="set-card-sub">Customize how your dashboard looks and feels.</p>
+
+        <!-- Theme Mode -->
+        <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:12px;">
+            <div class="setting-label">Theme Mode</div>
+            <div class="theme-options" style="width:100%;">
+                <div class="theme-card" id="dark-card" onclick="setTheme('dark')">
+                    <i class='bx bx-moon' style="color:var(--accent-color);"></i>
+                    <span>Dark Mode</span>
+                </div>
+                <div class="theme-card" id="light-card" onclick="setTheme('light')">
+                    <i class='bx bx-sun' style="color:#F59E0B;"></i>
+                    <span>Light Mode</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accent Color -->
+        <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
+            <div>
+                <div class="setting-label">Accent Color</div>
+                <div class="setting-desc">Choose your primary brand color</div>
+            </div>
+            <div class="accent-options">
+                <div class="accent-swatch active" style="background:#C4963D;" data-color="#C4963D" onclick="setAccent(this)" title="Gold (Default)"></div>
+                <div class="accent-swatch" style="background:#6366F1;" data-color="#6366F1" onclick="setAccent(this)" title="Indigo"></div>
+                <div class="accent-swatch" style="background:#10B981;" data-color="#10B981" onclick="setAccent(this)" title="Emerald"></div>
+                <div class="accent-swatch" style="background:#EF4444;" data-color="#EF4444" onclick="setAccent(this)" title="Red"></div>
+                <div class="accent-swatch" style="background:#8B5CF6;" data-color="#8B5CF6" onclick="setAccent(this)" title="Purple"></div>
+                <div class="accent-swatch" style="background:#0EA5E9;" data-color="#0EA5E9" onclick="setAccent(this)" title="Sky Blue"></div>
+            </div>
+        </div>
+
+        <!-- Font Size -->
+        <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
+            <div>
+                <div class="setting-label">Font Size</div>
+                <div class="setting-desc">Adjust text size across the dashboard</div>
+            </div>
+            <div class="font-options">
+                <button class="font-btn" id="font-sm" onclick="setFontSize('14px','sm')">Small</button>
+                <button class="font-btn active" id="font-md" onclick="setFontSize('16px','md')">Medium</button>
+                <button class="font-btn" id="font-lg" onclick="setFontSize('18px','lg')">Large</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Preferences ── -->
+    <div class="set-card">
+        <div class="set-card-title">
+            <i class='bx bx-slider-alt' style="color:var(--info-color);font-size:22px;"></i>
+            Preferences
+        </div>
+        <p class="set-card-sub">Control sidebar behaviour and display preferences.</p>
+
+        <div class="setting-row">
+            <div class="setting-info">
+                <div class="setting-label">Compact Sidebar</div>
+                <div class="setting-desc">Collapse sidebar to icon-only mode</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="compact-sidebar" onchange="toggleCompactSidebar(this)">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <div class="setting-row">
+            <div class="setting-info">
+                <div class="setting-label">Smooth Animations</div>
+                <div class="setting-desc">Enable fade and slide transitions</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="animations" checked onchange="toggleAnimations(this)">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <div class="setting-row">
+            <div class="setting-info">
+                <div class="setting-label">Desktop Notifications</div>
+                <div class="setting-desc">Allow browser push notifications</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="push-notif" onchange="togglePushNotif(this)">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <div class="setting-row">
+            <div class="setting-info">
+                <div class="setting-label">Auto Refresh Data</div>
+                <div class="setting-desc">Refresh dashboard stats every 5 minutes</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh(this)">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <div class="setting-row">
+            <div class="setting-info">
+                <div class="setting-label">Show Revenue in UGX</div>
+                <div class="setting-desc">Display all monetary values in Uganda Shillings</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="ugx-display" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <button class="btn-save-settings" onclick="saveSettings()">
+            <i class='bx bx-save'></i> Save Preferences
+        </button>
+    </div>
+
+    <!-- ── Danger Zone ── -->
+    <div class="set-card" style="border-color:rgba(255,23,68,0.2);">
+        <div class="set-card-title">
+            <i class='bx bx-error-circle' style="color:var(--danger-color);font-size:22px;"></i>
+            Danger Zone
+        </div>
+        <p class="set-card-sub">Irreversible actions — proceed with caution.</p>
+
+        <div class="setting-row">
+            <div class="setting-info">
+                <div class="setting-label">Clear All Activity Logs</div>
+                <div class="setting-desc">Permanently delete all audit trail records</div>
+            </div>
+            <button style="padding:8px 16px;border-radius:8px;border:1px solid rgba(255,23,68,0.4);background:rgba(255,23,68,0.07);color:var(--danger-color);font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;" onclick="confirmClear('logs')">Clear Logs</button>
+        </div>
+        <div class="setting-row">
+            <div class="setting-info">
+                <div class="setting-label">Reset All Settings</div>
+                <div class="setting-desc">Restore all settings to their default values</div>
+            </div>
+            <button style="padding:8px 16px;border-radius:8px;border:1px solid rgba(255,23,68,0.4);background:rgba(255,23,68,0.07);color:var(--danger-color);font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;" onclick="resetSettings()">Reset</button>
+        </div>
+    </div>
+
+    <!-- ── About ── -->
+    <div class="set-card">
+        <div class="set-card-title">
+            <i class='bx bx-info-circle' style="color:var(--success-color);font-size:22px;"></i>
+            About
+        </div>
+        <p class="set-card-sub">System and version information.</p>
+        <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Application</div></div>
+            <span style="font-size:13px;color:var(--text-secondary);">Fuel Connect Dashboard</span>
+        </div>
+        <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Version</div></div>
+            <span style="font-size:13px;color:var(--accent-color);font-weight:700;">v1.0.0</span>
+        </div>
+        <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Backend Framework</div></div>
+            <span style="font-size:13px;color:var(--text-secondary);">Django 5.x</span>
+        </div>
+        <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Database</div></div>
+            <span style="font-size:13px;color:var(--text-secondary);">SQLite3</span>
+        </div>
+        <div class="setting-row" style="border:none;">
+            <div class="setting-info"><div class="setting-label">Environment</div></div>
+            <span style="font-size:12px;padding:3px 10px;background:rgba(0,200,83,0.1);color:var(--success-color);border-radius:8px;font-weight:700;">Development</span>
+        </div>
+    </div>
+
+</div>
+
+<!-- Save Toast -->
+<div id="save-toast" style="display:none;position:fixed;bottom:28px;right:28px;background:var(--success-color);color:#000;padding:12px 22px;border-radius:12px;font-weight:700;font-size:14px;z-index:9999;box-shadow:0 8px 24px rgba(0,200,83,0.4);animation:fadeIn 0.3s;">
+    ✓ Settings saved!
+</div>
+
+<script>
+// ── Theme ──
+function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('fc_theme', t);
+    const icon = document.getElementById('theme-icon');
+    if(icon) icon.className = t==='dark' ? 'bx bx-sun' : 'bx bx-moon';
+    document.getElementById('dark-card').classList.toggle('selected', t==='dark');
+    document.getElementById('light-card').classList.toggle('selected', t==='light');
+}
+
+// ── Accent ──
+function setAccent(el) {
+    const color = el.dataset.color;
+    document.documentElement.style.setProperty('--accent-color', color);
+    localStorage.setItem('fc_accent', color);
+    document.querySelectorAll('.accent-swatch').forEach(s=>s.classList.remove('active'));
+    el.classList.add('active');
+}
+
+// ── Font Size ──
+function setFontSize(size, key) {
+    document.documentElement.style.fontSize = size;
+    localStorage.setItem('fc_font', key);
+    document.querySelectorAll('.font-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('font-'+key).classList.add('active');
+}
+
+// ── Compact Sidebar ──
+function toggleCompactSidebar(cb) {
+    const sidebar = document.querySelector('.sidebar');
+    if (cb.checked) {
+        sidebar.style.width = '68px';
+        document.querySelector('.main-content').style.marginLeft = '68px';
+        document.querySelectorAll('.sidebar-menu-item a span, .sidebar-group-label, .sidebar-divider, .sidebar-logo span, .sidebar-footer-item span').forEach(el=>el.style.display='none');
+        document.querySelectorAll('.sidebar-menu-item a').forEach(a=>{a.style.justifyContent='center';a.style.gap='0';});
+    } else {
+        sidebar.style.width = '260px';
+        document.querySelector('.main-content').style.marginLeft = '260px';
+        document.querySelectorAll('.sidebar-menu-item a span, .sidebar-group-label, .sidebar-divider, .sidebar-logo span, .sidebar-footer-item span').forEach(el=>el.style.display='');
+        document.querySelectorAll('.sidebar-menu-item a').forEach(a=>{a.style.justifyContent='';a.style.gap='';});
+    }
+    localStorage.setItem('fc_compact', cb.checked);
+}
+
+// ── Animations ──
+function toggleAnimations(cb) {
+    document.querySelectorAll('.fade-in').forEach(el=>{
+        el.style.animation = cb.checked ? '' : 'none';
+    });
+    localStorage.setItem('fc_anim', cb.checked);
+}
+
+// ── Push Notifications ──
+function togglePushNotif(cb) {
+    if(cb.checked && 'Notification' in window) {
+        Notification.requestPermission();
+    }
+}
+
+// ── Auto Refresh ──
+let refreshTimer = null;
+function toggleAutoRefresh(cb) {
+    if(cb.checked) {
+        refreshTimer = setInterval(()=>location.reload(), 300000);
+    } else {
+        clearInterval(refreshTimer);
+    }
+}
+
+// ── Save ──
+function saveSettings() {
+    const toast = document.getElementById('save-toast');
+    toast.style.display = 'block';
+    setTimeout(()=>toast.style.display='none', 2500);
+}
+
+// ── Reset ──
+function resetSettings() {
+    if(!confirm('Reset all settings to defaults?')) return;
+    localStorage.removeItem('fc_theme');
+    localStorage.removeItem('fc_accent');
+    localStorage.removeItem('fc_font');
+    localStorage.removeItem('fc_compact');
+    localStorage.removeItem('fc_anim');
+    location.reload();
+}
+
+function confirmClear(t){
+    if(confirm('This will permanently delete all '+t+'. Are you sure?')) alert('This feature requires backend implementation.');
+}
+
+// ── Init from localStorage ──
+(function(){
+    const theme  = localStorage.getItem('fc_theme') || 'dark';
+    const accent = localStorage.getItem('fc_accent') || '#C4963D';
+    const font   = localStorage.getItem('fc_font')  || 'md';
+    const compact= localStorage.getItem('fc_compact')==='true';
+
+    setTheme(theme);
+
+    if(accent !== '#C4963D') {
+        document.documentElement.style.setProperty('--accent-color', accent);
+        document.querySelectorAll('.accent-swatch').forEach(s=>{
+            s.classList.toggle('active', s.dataset.color===accent);
+        });
+    }
+
+    document.querySelectorAll('.font-btn').forEach(b=>b.classList.remove('active'));
+    const fb = document.getElementById('font-'+font);
+    if(fb) fb.classList.add('active');
+
+    const cb = document.getElementById('compact-sidebar');
+    if(cb) cb.checked = compact;
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header_title %}Change Email{% endblock %}
+{% block header_subtitle %}Update the email address associated with your account{% endblock %}
+
+{% block extra_css %}
+<style>
+.email-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
+.email-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:16px;padding:28px;}
+.email-card-title{font-size:16px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+.email-card-sub{font-size:13px;color:var(--text-secondary);margin-bottom:24px;}
+.form-group{margin-bottom:18px;}
+.form-group label{display:block;font-size:13px;color:var(--text-secondary);margin-bottom:7px;font-weight:500;}
+.form-group input{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border-color);border-radius:10px;padding:12px 14px;color:var(--text-primary);font-family:'Outfit',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s;}
+.form-group input:focus{border-color:var(--accent-color);}
+.form-group input.current-email{opacity:0.6;cursor:not-allowed;}
+.btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--accent-color);color:#000;border:none;border-radius:10px;padding:12px 24px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;width:100%;justify-content:center;margin-top:8px;}
+.btn-primary:hover{background:var(--accent-hover);}
+.info-box{display:flex;align-items:flex-start;gap:12px;padding:14px;border-radius:10px;margin-bottom:14px;font-size:13px;}
+.info-box.warning{background:rgba(196,150,61,0.08);border:1px solid rgba(196,150,61,0.2);}
+.info-box.warning i{color:var(--accent-color);}
+.info-box.info{background:rgba(0,176,255,0.06);border:1px solid rgba(0,176,255,0.15);}
+.info-box.info i{color:var(--info-color);}
+.info-box i{font-size:18px;flex-shrink:0;margin-top:1px;}
+.info-box p{color:var(--text-secondary);line-height:1.6;margin:0;}
+.step-list{list-style:none;counter-reset:steps;display:flex;flex-direction:column;gap:16px;}
+.step-list li{display:flex;align-items:flex-start;gap:14px;counter-increment:steps;}
+.step-num{width:28px;height:28px;border-radius:50%;background:var(--accent-color);color:#000;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
+.step-text{font-size:14px;color:var(--text-secondary);padding-top:4px;line-height:1.5;}
+.step-text strong{color:var(--text-primary);}
+.verify-section{margin-top:20px;padding-top:20px;border-top:1px solid var(--border-color);display:none;}
+.verify-section.visible{display:block;}
+.otp-inputs{display:flex;gap:10px;margin-top:10px;}
+.otp-input{width:48px;height:52px;text-align:center;font-size:22px;font-weight:700;background:rgba(255,255,255,0.04);border:1px solid var(--border-color);border-radius:10px;color:var(--text-primary);font-family:'Outfit',sans-serif;outline:none;transition:border-color 0.2s;}
+.otp-input:focus{border-color:var(--accent-color);}
+@media(max-width:900px){.email-grid{grid-template-columns:1fr;}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="email-grid fade-in">
+
+    <!-- Change Email Form -->
+    <div class="email-card">
+        <div class="email-card-title">
+            <i class='bx bx-at' style="color:var(--accent-color);font-size:22px;"></i>
+            Update Email Address
+        </div>
+        <p class="email-card-sub">A verification link will be sent to your new email.</p>
+
+        <div class="info-box warning">
+            <i class='bx bx-info-circle'></i>
+            <p>Changing your email will require re-verification. Your current email will remain active until confirmed.</p>
+        </div>
+
+        <form id="email-form" onsubmit="requestChange(event)">
+            <div class="form-group">
+                <label>Current Email</label>
+                <input type="email" class="current-email" value="{{ request.user.email|default:'Not set' }}" readonly>
+            </div>
+            <div class="form-group">
+                <label>New Email Address</label>
+                <input type="email" id="new-email" placeholder="new@email.com" required>
+            </div>
+            <div class="form-group">
+                <label>Confirm New Email</label>
+                <input type="email" id="confirm-email" placeholder="new@email.com" required>
+            </div>
+            <div class="form-group">
+                <label>Account Password <span style="color:var(--text-muted);font-weight:400;">(confirm identity)</span></label>
+                <input type="password" id="email-pw" placeholder="Your current password" required>
+            </div>
+            <button type="submit" class="btn-primary"><i class='bx bx-envelope'></i> Send Verification</button>
+        </form>
+
+        <!-- OTP verification (shown after submit) -->
+        <div class="verify-section" id="otp-section">
+            <p style="font-size:14px;color:var(--text-secondary);margin-bottom:12px;">
+                Enter the 6-digit code sent to <strong id="otp-target-email" style="color:var(--text-primary);"></strong>
+            </p>
+            <div class="otp-inputs">
+                <input class="otp-input" maxlength="1" type="text" oninput="otpNext(this,0)">
+                <input class="otp-input" maxlength="1" type="text" oninput="otpNext(this,1)">
+                <input class="otp-input" maxlength="1" type="text" oninput="otpNext(this,2)">
+                <input class="otp-input" maxlength="1" type="text" oninput="otpNext(this,3)">
+                <input class="otp-input" maxlength="1" type="text" oninput="otpNext(this,4)">
+                <input class="otp-input" maxlength="1" type="text" oninput="otpNext(this,5)">
+            </div>
+            <button class="btn-primary" style="margin-top:16px;"><i class='bx bx-check-circle'></i> Verify & Update Email</button>
+            <p style="font-size:13px;color:var(--text-muted);text-align:center;margin-top:12px;">
+                Didn't receive it? <span style="color:var(--accent-color);cursor:pointer;">Resend code</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- How it works -->
+    <div>
+        <div class="email-card" style="margin-bottom:24px;">
+            <div class="email-card-title">
+                <i class='bx bx-info-circle' style="color:var(--info-color);font-size:22px;"></i>
+                How It Works
+            </div>
+            <p class="email-card-sub">Follow these steps to change your email safely.</p>
+            <ul class="step-list">
+                <li>
+                    <div class="step-num">1</div>
+                    <div class="step-text">Enter your <strong>new email address</strong> and confirm your <strong>account password</strong>.</div>
+                </li>
+                <li>
+                    <div class="step-num">2</div>
+                    <div class="step-text">Click <strong>Send Verification</strong> — a 6-digit code is emailed to your new address.</div>
+                </li>
+                <li>
+                    <div class="step-num">3</div>
+                    <div class="step-text">Enter the code in the <strong>OTP box</strong> that appears to confirm ownership.</div>
+                </li>
+                <li>
+                    <div class="step-num">4</div>
+                    <div class="step-text">Your email is <strong>updated instantly</strong> and a confirmation is sent to your old address.</div>
+                </li>
+            </ul>
+        </div>
+
+        <div class="email-card">
+            <div class="email-card-title">
+                <i class='bx bx-shield-alt-2' style="color:var(--success-color);font-size:22px;"></i>
+                Email Verification Status
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-radius:10px;
+                {% if request.user.is_email_verified %}background:rgba(0,200,83,0.06);border:1px solid rgba(0,200,83,0.2);{% else %}background:rgba(255,23,68,0.06);border:1px solid rgba(255,23,68,0.2);{% endif %}">
+                <div>
+                    <div style="font-size:14px;font-weight:600;">Current Email</div>
+                    <div style="font-size:13px;color:var(--text-secondary);">{{ request.user.email|default:"Not set" }}</div>
+                </div>
+                {% if request.user.is_email_verified %}
+                <span style="padding:6px 14px;border-radius:20px;background:rgba(0,200,83,0.15);color:var(--success-color);font-size:12px;font-weight:700;">✓ Verified</span>
+                {% else %}
+                <span style="padding:6px 14px;border-radius:20px;background:rgba(255,23,68,0.12);color:var(--danger-color);font-size:12px;font-weight:700;">✗ Unverified</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function requestChange(e) {
+    e.preventDefault();
+    const ne = document.getElementById('new-email').value;
+    const ce = document.getElementById('confirm-email').value;
+    if (ne !== ce) {
+        alert('Emails do not match!');
+        return;
+    }
+    document.getElementById('otp-target-email').textContent = ne;
+    document.getElementById('otp-section').classList.add('visible');
+    document.getElementById('email-form').querySelector('button').textContent = '✓ Code Sent — Resend';
+}
+
+const otpInputs = document.querySelectorAll('.otp-input');
+function otpNext(el, idx) {
+    if (el.value && idx < 5) otpInputs[idx + 1].focus();
+}
+otpInputs.forEach((inp, i) => {
+    inp.addEventListener('keydown', e => {
+        if (e.key === 'Backspace' && !inp.value && i > 0) otpInputs[i - 1].focus();
+    });
+});
+</script>
+{% endblock %}

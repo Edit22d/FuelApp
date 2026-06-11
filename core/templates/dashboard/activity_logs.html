@@ -1,0 +1,195 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header_title %}Activity Logs{% endblock %}
+{% block header_subtitle %}Chronological record of all system actions and events{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
+.search-box{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border-color);border-radius:10px;padding:0 14px;flex:1;min-width:220px;transition:border-color 0.2s;}
+.search-box:focus-within{border-color:var(--accent-color);}
+.search-box i{color:var(--text-muted);font-size:18px;}
+.search-box input{background:transparent;border:none;outline:none;color:var(--text-primary);font-family:'Outfit',sans-serif;font-size:14px;padding:11px 0;width:100%;}
+.search-box input::placeholder{color:var(--text-muted);}
+.filter-select{background:rgba(255,255,255,0.04);border:1px solid var(--border-color);border-radius:10px;padding:10px 14px;color:var(--text-primary);font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer;outline:none;min-width:140px;}
+.filter-select:focus{border-color:var(--accent-color);}
+.filter-select option{background:#1A1A1A;}
+.action-btns{display:flex;align-items:center;gap:6px;}
+.icon-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border-color);background:rgba(255,255,255,0.03);cursor:pointer;transition:all 0.2s;font-size:16px;}
+.icon-btn.view{color:var(--text-secondary);}.icon-btn.view:hover{background:rgba(255,255,255,0.06);border-color:var(--text-secondary);}
+.icon-btn.del{color:var(--danger-color);}.icon-btn.del:hover{background:rgba(255,23,68,0.12);border-color:var(--danger-color);}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:999;align-items:center;justify-content:center;}
+.modal-overlay.active{display:flex;}
+.modal-box{background:#1E1E1E;border:1px solid var(--border-color);border-radius:16px;padding:28px;width:100%;max-width:500px;animation:fadeIn 0.2s ease;}
+.modal-box h3{font-size:18px;font-weight:700;margin-bottom:16px;}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
+.btn-cancel{padding:10px 20px;border-radius:8px;border:1px solid var(--border-color);background:transparent;color:var(--text-secondary);font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer;}
+.btn-save{padding:10px 20px;border-radius:8px;border:none;background:var(--accent-color);color:#000;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer;}
+.log-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.log-create{background:var(--success-color);}
+.log-update{background:var(--info-color);}
+.log-delete{background:var(--danger-color);}
+.log-login{background:var(--accent-color);}
+.log-other{background:var(--text-muted);}
+.record-count{font-size:13px;color:var(--text-muted);}
+.log-action-badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="glass-card fade-in">
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h2 style="font-size:18px;font-weight:700;">Activity Logs
+            <span class="record-count" id="log-count">({{ logs|length }})</span>
+        </h2>
+        <button style="display:flex;align-items:center;gap:8px;background:rgba(255,23,68,0.1);color:var(--danger-color);border:1px solid rgba(255,23,68,0.3);border-radius:10px;padding:10px 16px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer;" onclick="openModal('clear-logs-modal')">
+            <i class='bx bx-trash'></i> Clear All Logs
+        </button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="page-toolbar">
+        <div class="search-box">
+            <i class='bx bx-search'></i>
+            <input type="text" id="log-search" placeholder="Search user, action, description..." oninput="filterLogs()">
+        </div>
+        <select class="filter-select" id="action-filter" onchange="filterLogs()">
+            <option value="">All Actions</option>
+            <option value="create">Create</option>
+            <option value="update">Update</option>
+            <option value="delete">Delete</option>
+            <option value="login">Login</option>
+        </select>
+        <input type="date" id="date-filter" class="filter-select" style="min-width:160px;" onchange="filterLogs()">
+    </div>
+
+    <!-- Table -->
+    <div class="table-container">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>User</th>
+                    <th>Description</th>
+                    <th>IP Address</th>
+                    <th>Timestamp</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="logs-tbody">
+                {% for log in logs %}
+                <tr data-search="{{ log.user|lower }} {{ log.action|lower }} {{ log.description|lower }}"
+                    data-action="{{ log.action|lower }}"
+                    data-date="{{ log.created_at|date:'Y-m-d' }}">
+                    <td>
+                        <span class="log-action-badge"
+                            style="{% if log.action == 'create' %}background:rgba(0,200,83,0.12);color:var(--success-color);
+                            {% elif log.action == 'update' %}background:rgba(0,176,255,0.12);color:var(--info-color);
+                            {% elif log.action == 'delete' %}background:rgba(255,23,68,0.12);color:var(--danger-color);
+                            {% elif log.action == 'login' %}background:rgba(196,150,61,0.15);color:var(--accent-color);
+                            {% else %}background:rgba(255,255,255,0.06);color:var(--text-secondary);{% endif %}">
+                            {{ log.action }}
+                        </span>
+                    </td>
+                    <td><strong>{{ log.user }}</strong></td>
+                    <td style="color:var(--text-secondary);font-size:13px;">{{ log.description }}</td>
+                    <td style="color:var(--text-muted);font-size:13px;font-family:monospace;">{{ log.ip_address|default:"—" }}</td>
+                    <td style="color:var(--text-secondary);font-size:12px;">{{ log.created_at|date:"M d, Y · H:i" }}</td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="icon-btn view" title="View Details" onclick="viewLog('{{ log.action }}','{{ log.user }}','{{ log.description|escapejs }}','{{ log.ip_address|default:'—' }}','{{ log.created_at|date:'M d, Y · H:i' }}')">
+                                <i class='bx bx-show'></i>
+                            </button>
+                            <button class="icon-btn del" title="Delete Log" onclick="openModal('delete-log-modal')">
+                                <i class='bx bx-trash'></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align:center;color:var(--text-muted);padding:48px 0;">
+                        <i class='bx bx-list-ul' style="font-size:40px;display:block;margin-bottom:10px;"></i>
+                        No activity logs found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div id="no-results-logs" style="display:none;text-align:center;padding:32px;color:var(--text-muted);">
+        <i class='bx bx-search-alt' style="font-size:32px;display:block;margin-bottom:8px;"></i>No logs match your filter.
+    </div>
+</div>
+
+<!-- ── VIEW LOG ── -->
+<div class="modal-overlay" id="view-log-modal">
+    <div class="modal-box">
+        <h3><i class='bx bx-detail' style="color:var(--accent-color)"></i> Log Details</h3>
+        <div id="log-detail" style="font-size:14px;color:var(--text-secondary);line-height:2;"></div>
+        <div class="modal-footer"><button class="btn-save" onclick="closeModal('view-log-modal')">Close</button></div>
+    </div>
+</div>
+
+<!-- ── DELETE LOG ── -->
+<div class="modal-overlay" id="delete-log-modal">
+    <div class="modal-box" style="max-width:380px;text-align:center;">
+        <i class='bx bx-error-circle' style="font-size:48px;color:var(--danger-color);margin-bottom:12px;display:block;"></i>
+        <h3>Delete Log Entry?</h3>
+        <p style="color:var(--text-secondary);font-size:14px;margin:10px 0 20px;">This log entry will be permanently removed.</p>
+        <div class="modal-footer" style="justify-content:center;">
+            <button class="btn-cancel" onclick="closeModal('delete-log-modal')">Cancel</button>
+            <button class="btn-save" style="background:var(--danger-color);">Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── CLEAR ALL LOGS ── -->
+<div class="modal-overlay" id="clear-logs-modal">
+    <div class="modal-box" style="max-width:380px;text-align:center;">
+        <i class='bx bx-error-circle' style="font-size:48px;color:var(--danger-color);margin-bottom:12px;display:block;"></i>
+        <h3>Clear All Logs?</h3>
+        <p style="color:var(--text-secondary);font-size:14px;margin:10px 0 20px;">This will permanently delete <strong>all</strong> activity log entries. This cannot be undone.</p>
+        <div class="modal-footer" style="justify-content:center;">
+            <button class="btn-cancel" onclick="closeModal('clear-logs-modal')">Cancel</button>
+            <button class="btn-save" style="background:var(--danger-color);">Clear All</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function openModal(id){document.getElementById(id).classList.add('active');}
+function closeModal(id){document.getElementById(id).classList.remove('active');}
+document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('active');});});
+
+function viewLog(action,user,desc,ip,ts){
+    document.getElementById('log-detail').innerHTML=`
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">
+            <div><span style="color:var(--text-muted);font-size:11px;">ACTION</span><br><strong style="color:var(--text-primary);">${action.toUpperCase()}</strong></div>
+            <div><span style="color:var(--text-muted);font-size:11px;">USER</span><br><strong style="color:var(--text-primary);">${user}</strong></div>
+            <div style="grid-column:span 2;"><span style="color:var(--text-muted);font-size:11px;">DESCRIPTION</span><br><span style="color:var(--text-primary);">${desc}</span></div>
+            <div><span style="color:var(--text-muted);font-size:11px;">IP ADDRESS</span><br><code style="color:var(--text-primary);font-size:13px;">${ip}</code></div>
+            <div><span style="color:var(--text-muted);font-size:11px;">TIMESTAMP</span><br><strong style="color:var(--text-primary);">${ts}</strong></div>
+        </div>`;
+    openModal('view-log-modal');
+}
+
+function filterLogs(){
+    const q=document.getElementById('log-search').value.toLowerCase();
+    const a=document.getElementById('action-filter').value;
+    const d=document.getElementById('date-filter').value;
+    const rows=document.querySelectorAll('#logs-tbody tr[data-search]');
+    let vis=0;
+    rows.forEach(row=>{
+        const mQ=!q||row.dataset.search.includes(q);
+        const mA=!a||row.dataset.action===a;
+        const mD=!d||row.dataset.date===d;
+        row.style.display=(mQ&&mA&&mD)?'':'none';
+        if(mQ&&mA&&mD)vis++;
+    });
+    document.getElementById('log-count').textContent=`(${vis})`;
+    document.getElementById('no-results-logs').style.display=vis===0?'block':'none';
+}
+</script>
+{% endblock %}

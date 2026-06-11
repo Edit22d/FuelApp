@@ -1,0 +1,368 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header_title %}Console Overview{% endblock %}
+{% block header_subtitle %}Real-time tracking of Premium Fuel Connect activities{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* KPI CONTAINER */
+    .kpi-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+    }
+
+    .kpi-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .kpi-info h3 {
+        font-size: 14px;
+        color: var(--text-secondary);
+        font-weight: 500;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .kpi-info p {
+        font-size: 26px;
+        font-weight: 800;
+        color: var(--text-primary);
+    }
+
+    .kpi-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    .kpi-revenue .kpi-icon {
+        background-color: rgba(196, 150, 61, 0.1);
+        color: var(--accent-color);
+        border: 1px solid rgba(196, 150, 61, 0.2);
+    }
+    .kpi-orders .kpi-icon {
+        background-color: rgba(0, 176, 255, 0.1);
+        color: var(--info-color);
+        border: 1px solid rgba(0, 176, 255, 0.2);
+    }
+    .kpi-stations .kpi-icon {
+        background-color: rgba(0, 200, 83, 0.1);
+        color: var(--success-color);
+        border: 1px solid rgba(0, 200, 83, 0.2);
+    }
+    .kpi-users .kpi-icon {
+        background-color: rgba(233, 30, 99, 0.1);
+        color: #E91E63;
+        border: 1px solid rgba(233, 30, 99, 0.2);
+    }
+
+    /* CHARTS LAYOUT */
+    .charts-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+    }
+
+    .chart-container-large {
+        min-height: 320px;
+    }
+
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .chart-header h2 {
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .chart-subgrid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+        margin-top: 24px;
+    }
+
+    /* RECENT ORDERS LAYOUT */
+    .recent-container {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    @media (max-width: 1200px) {
+        .charts-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- KPI CARDS -->
+<div class="kpi-container fade-in">
+    <!-- Revenue -->
+    <div class="glass-card kpi-card kpi-revenue">
+        <div class="kpi-info">
+            <h3>Total Sales</h3>
+            <p>UGX {{ total_revenue|floatformat:0 }}</p>
+        </div>
+        <div class="kpi-icon">
+            <i class='bx bx-trending-up'></i>
+        </div>
+    </div>
+    
+    <!-- Orders -->
+    <div class="glass-card kpi-card kpi-orders">
+        <div class="kpi-info">
+            <h3>Total Orders</h3>
+            <p>{{ total_orders }}</p>
+        </div>
+        <div class="kpi-icon">
+            <i class='bx bx-receipt'></i>
+        </div>
+    </div>
+
+    <!-- Active Stations -->
+    <div class="glass-card kpi-card kpi-stations">
+        <div class="kpi-info">
+            <h3>Active Stations</h3>
+            <p>{{ active_stations }}</p>
+        </div>
+        <div class="kpi-icon">
+            <i class='bx bx-station'></i>
+        </div>
+    </div>
+
+    <!-- Users -->
+    <div class="glass-card kpi-card kpi-users">
+        <div class="kpi-info">
+            <h3>Users Enrolled</h3>
+            <p>{{ total_users }}</p>
+        </div>
+        <div class="kpi-icon">
+            <i class='bx bx-user'></i>
+        </div>
+    </div>
+</div>
+
+<!-- CHARTS GRID -->
+<div class="charts-grid fade-in" style="animation-delay: 0.1s;">
+    <!-- Large Line Chart -->
+    <div class="glass-card chart-container-large">
+        <div class="chart-header">
+            <h2>Order History & Revenue Trends</h2>
+            <div style="color: var(--text-secondary); font-size: 12px; display: flex; gap: 12px;">
+                <span><i class='bx bxs-circle' style='color: var(--accent-color);'></i> Revenue (UGX '000)</span>
+                <span><i class='bx bxs-circle' style='color: var(--info-color);'></i> Orders Count</span>
+            </div>
+        </div>
+        <canvas id="lineChart" style="max-height: 240px;"></canvas>
+    </div>
+
+    <!-- Pie Chart -->
+    <div class="glass-card">
+        <div class="chart-header">
+            <h2>Order Statuses</h2>
+        </div>
+        <canvas id="pieChart" style="max-height: 240px;"></canvas>
+    </div>
+</div>
+
+<!-- BAR CHART AND TABLE ROW -->
+<div class="charts-grid fade-in" style="animation-delay: 0.2s;">
+    <!-- Bar Chart -->
+    <div class="glass-card">
+        <div class="chart-header">
+            <h2>Popular Fuel Types (Total Liters)</h2>
+        </div>
+        <canvas id="barChart" style="max-height: 250px;"></canvas>
+    </div>
+
+    <!-- Recent Orders Table -->
+    <div class="glass-card recent-container">
+        <div class="chart-header">
+            <h2>Recent Orders</h2>
+            <a href="{% url 'dashboard_orders' %}" style="color: var(--accent-color); font-size: 13px; text-decoration: none; font-weight: 500;">View All <i class='bx bx-right-arrow-alt'></i></a>
+        </div>
+        <div class="table-container">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Station</th>
+                        <th>Fuel</th>
+                        <th>Qty</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr>
+                        <td><strong>{{ order.station.name }}</strong></td>
+                        <td style="color: var(--text-secondary);">{{ order.fuel_type }}</td>
+                        <td>{{ order.quantity }} L</td>
+                        <td>
+                            <span class="status-badge 
+                                {% if order.status == 'DELIVERED' %}status-delivered
+                                {% elif order.status == 'PENDING' %}status-pending
+                                {% elif order.status == 'ONGOING' %}status-ongoing
+                                {% else %}status-cancelled{% endif %}">
+                                {{ order.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 32px 0;">No recent orders.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- CHARTS INITIALIZATION SCRIPT -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Chart.js Theme Defaults
+        Chart.defaults.color = '#A0A0A0';
+        Chart.defaults.borderColor = '#2D2D2D';
+        Chart.defaults.font.family = "'Outfit', sans-serif";
+
+        // ==========================================
+        // 1. LINE CHART (Trends)
+        // ==========================================
+        const lineCtx = document.getElementById('lineChart').getContext('2d');
+        new Chart(lineCtx, {
+            type: 'line',
+            data: {
+                labels: {{ line_labels|safe }},
+                datasets: [
+                    {
+                        label: 'Revenue (UGX \'000)',
+                        data: {{ line_data_revenue|safe }},
+                        borderColor: '#C4963D',
+                        backgroundColor: 'rgba(196, 150, 61, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Orders Count',
+                        data: {{ line_data_orders|safe }},
+                        borderColor: '#00B0FF',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        tension: 0.3,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: { display: false }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: { display: true, text: 'Revenue (\'000s UGX)' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: { drawOnChartArea: false },
+                        title: { display: true, text: 'Number of Orders' },
+                        ticks: { stepSize: 1 }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // ==========================================
+        // 2. PIE CHART (Order Statuses)
+        // ==========================================
+        const pieCtx = document.getElementById('pieChart').getContext('2d');
+        new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ pie_labels|safe }},
+                datasets: [{
+                    data: {{ pie_data|safe }},
+                    backgroundColor: [
+                        '#00C853', // DELIVERED
+                        '#C4963D', // PENDING
+                        '#00B0FF', // ONGOING
+                        '#FF1744'  // CANCELLED
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { boxWidth: 12, padding: 16 }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+
+        // ==========================================
+        // 3. BAR CHART (Popular Fuels)
+        // ==========================================
+        const barCtx = document.getElementById('barChart').getContext('2d');
+        new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ bar_labels|safe }},
+                datasets: [{
+                    label: 'Liters Ordered',
+                    data: {{ bar_data|safe }},
+                    backgroundColor: 'rgba(196, 150, 61, 0.75)',
+                    hoverBackgroundColor: '#C4963D',
+                    borderRadius: 6,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { 
+                        beginAtZero: true,
+                        title: { display: true, text: 'Liters (L)' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

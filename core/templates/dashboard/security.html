@@ -1,0 +1,377 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header_title %}Security{% endblock %}
+{% block header_subtitle %}Manage your account security, password, and login activity{% endblock %}
+
+{% block extra_css %}
+<style>
+.security-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
+.sec-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:16px;padding:26px;transition:border-color 0.2s;}
+.sec-card-title{font-size:16px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+.sec-card-sub{font-size:13px;color:var(--text-secondary);margin-bottom:22px;}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:13px;color:var(--text-secondary);margin-bottom:7px;font-weight:500;}
+.input-wrap{position:relative;}
+.input-wrap input{
+    width:100%;background:var(--input-bg);border:1px solid var(--border-color);
+    border-radius:10px;padding:12px 44px 12px 14px;color:var(--text-primary);
+    font-family:'Outfit',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s;}
+.input-wrap input:focus{border-color:var(--accent-color);box-shadow:0 0 0 3px rgba(196,150,61,0.12);}
+.input-wrap .eye-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;}
+.input-wrap .eye-btn:hover{color:var(--text-primary);}
+.strength-bar{height:5px;border-radius:4px;margin-top:8px;background:var(--border-color);overflow:hidden;}
+.strength-fill{height:100%;border-radius:4px;transition:width 0.35s,background 0.35s;width:0%;}
+.strength-label{font-size:11px;color:var(--text-muted);margin-top:5px;}
+.rules-list{list-style:none;margin-top:8px;display:flex;flex-direction:column;gap:4px;}
+.rules-list li{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;transition:color 0.2s;}
+.rules-list li i{font-size:14px;}
+.rules-list li.pass{color:var(--success-color);}
+.rules-list li.fail{color:var(--text-muted);}
+.security-tip{display:flex;align-items:flex-start;gap:12px;padding:14px;background:rgba(196,150,61,0.07);border:1px solid rgba(196,150,61,0.2);border-radius:10px;margin-bottom:18px;font-size:13px;color:var(--text-secondary);}
+.security-tip i{color:var(--accent-color);font-size:18px;flex-shrink:0;margin-top:1px;}
+.btn-submit{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--accent-color);color:#000;border:none;border-radius:10px;padding:12px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;width:100%;margin-top:4px;}
+.btn-submit:hover{background:var(--accent-hover);}
+/* Alert messages */
+.alert{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:500;margin-bottom:16px;}
+.alert-error{background:rgba(255,23,68,0.1);border:1px solid rgba(255,23,68,0.3);color:var(--danger-color);}
+.alert-success{background:rgba(0,200,83,0.1);border:1px solid rgba(0,200,83,0.3);color:var(--success-color);}
+/* Sessions */
+.session-item{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border-color);}
+.session-item:last-child{border-bottom:none;}
+.session-device{display:flex;align-items:center;gap:12px;}
+.session-device i{font-size:22px;color:var(--text-secondary);}
+.current-badge{font-size:11px;padding:3px 10px;border-radius:6px;background:rgba(0,200,83,0.1);color:var(--success-color);font-weight:700;}
+/* Log history */
+.log-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-color);}
+.log-row:last-child{border-bottom:none;}
+.log-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.log-dot.login{background:var(--success-color);}
+.log-dot.logout{background:var(--danger-color);}
+.log-dot.update{background:var(--info-color);}
+.log-body{flex:1;}
+.log-action{font-size:12px;font-weight:700;text-transform:uppercase;}
+.log-desc{font-size:12px;color:var(--text-secondary);}
+.log-time{font-size:11px;color:var(--text-muted);white-space:nowrap;}
+/* 2FA card */
+.twofa-status{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--input-bg);border:1px solid var(--border-color);border-radius:10px;margin-bottom:14px;}
+.twofa-toggle{padding:8px 18px;border-radius:8px;border:none;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.twofa-on{background:var(--success-color);color:#000;}
+.twofa-off{background:var(--danger-color);color:#fff;}
+/* Score meter */
+.score-meter{display:flex;gap:6px;margin-top:14px;}
+.score-seg{flex:1;height:6px;border-radius:4px;background:var(--border-color);transition:background 0.4s;}
+@media(max-width:900px){.security-grid{grid-template-columns:1fr;}}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if error %}
+<div class="alert alert-error fade-in"><i class='bx bx-error-circle'></i> {{ error }}</div>
+{% endif %}
+{% if success %}
+<div class="alert alert-success fade-in"><i class='bx bx-check-circle'></i> {{ success }}</div>
+{% endif %}
+
+<div class="security-grid">
+
+    <!-- ════ Left column ════ -->
+    <div style="display:flex;flex-direction:column;gap:24px;">
+
+        <!-- Change Password -->
+        <div class="sec-card fade-in">
+            <div class="sec-card-title">
+                <i class='bx bx-lock-alt' style="color:var(--accent-color);font-size:22px;"></i>
+                Change Password
+            </div>
+            <p class="sec-card-sub">Keep your account safe with a strong, unique password.</p>
+
+            <div class="security-tip">
+                <i class='bx bx-shield-alt-2'></i>
+                <span>Use at least 8 characters, including an uppercase letter and a number.</span>
+            </div>
+
+            <form method="post" action="{% url 'dashboard_security' %}" autocomplete="off">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="cur-pw">Current Password</label>
+                    <div class="input-wrap">
+                        <input type="password" id="cur-pw" name="current_password" placeholder="Enter current password" autocomplete="current-password">
+                        <button type="button" class="eye-btn" onclick="togglePw('cur-pw',this)"><i class='bx bx-hide'></i></button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="new-pw">New Password</label>
+                    <div class="input-wrap">
+                        <input type="password" id="new-pw" name="new_password" placeholder="Create a strong password" oninput="evalPassword(this.value)" autocomplete="new-password">
+                        <button type="button" class="eye-btn" onclick="togglePw('new-pw',this)"><i class='bx bx-hide'></i></button>
+                    </div>
+                    <div class="strength-bar"><div class="strength-fill" id="str-fill"></div></div>
+                    <div class="strength-label" id="str-label">Enter a password to check strength</div>
+                    <ul class="rules-list" id="pw-rules">
+                        <li id="rule-len" class="fail"><i class='bx bx-x'></i> At least 8 characters</li>
+                        <li id="rule-up"  class="fail"><i class='bx bx-x'></i> One uppercase letter (A–Z)</li>
+                        <li id="rule-num" class="fail"><i class='bx bx-x'></i> One number (0–9)</li>
+                        <li id="rule-sym" class="fail"><i class='bx bx-x'></i> One symbol (!@#$…) — recommended</li>
+                    </ul>
+                </div>
+
+                <div class="form-group">
+                    <label for="conf-pw">Confirm New Password</label>
+                    <div class="input-wrap">
+                        <input type="password" id="conf-pw" name="confirm_password" placeholder="Repeat new password" oninput="checkMatch()" autocomplete="new-password">
+                        <button type="button" class="eye-btn" onclick="togglePw('conf-pw',this)"><i class='bx bx-hide'></i></button>
+                    </div>
+                    <div id="match-label" style="font-size:12px;margin-top:5px;"></div>
+                </div>
+
+                <!-- Strength score segments -->
+                <div class="score-meter" id="score-segs">
+                    <div class="score-seg" id="seg1"></div>
+                    <div class="score-seg" id="seg2"></div>
+                    <div class="score-seg" id="seg3"></div>
+                    <div class="score-seg" id="seg4"></div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="submit-btn" style="margin-top:18px;">
+                    <i class='bx bx-lock-open-alt'></i> Update Password
+                </button>
+            </form>
+        </div>
+
+        <!-- Two-Factor Authentication -->
+        <div class="sec-card fade-in" style="animation-delay:0.1s;">
+            <div class="sec-card-title">
+                <i class='bx bx-shield-quarter' style="color:var(--success-color);font-size:22px;"></i>
+                Two-Factor Authentication
+            </div>
+            <p class="sec-card-sub">Add an extra layer of verification to your sign-in.</p>
+
+            <div class="twofa-status">
+                <div>
+                    <div style="font-size:14px;font-weight:600;">2FA Status</div>
+                    <div style="font-size:12px;color:var(--text-muted);" id="twofa-status-text">Currently disabled</div>
+                </div>
+                <button class="twofa-toggle twofa-on" id="twofa-btn" onclick="toggle2FA()">Enable</button>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary);">
+                    <i class='bx bx-mobile-alt' style="font-size:18px;color:var(--info-color);"></i>
+                    Authenticator App (Google Authenticator, Authy)
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary);">
+                    <i class='bx bx-message-square' style="font-size:18px;color:var(--accent-color);"></i>
+                    SMS Code to your registered phone number
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary);">
+                    <i class='bx bx-envelope' style="font-size:18px;color:var(--success-color);"></i>
+                    Email verification link
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════ Right column ════ -->
+    <div style="display:flex;flex-direction:column;gap:24px;">
+
+        <!-- Active Session -->
+        <div class="sec-card fade-in" style="animation-delay:0.05s;">
+            <div class="sec-card-title">
+                <i class='bx bx-devices' style="color:var(--info-color);font-size:22px;"></i>
+                Active Session
+            </div>
+            <p class="sec-card-sub">Devices currently signed into your admin account.</p>
+
+            <div class="session-item">
+                <div class="session-device">
+                    <i class='bx bx-desktop'></i>
+                    <div>
+                        <div style="font-size:14px;font-weight:600;">This Device</div>
+                        <div style="font-size:12px;color:var(--text-secondary);" id="device-info">Loading…</div>
+                        <div style="font-size:11px;color:var(--success-color);margin-top:2px;">● Active now &mdash; IP: {{ request.META.REMOTE_ADDR|default:"127.0.0.1" }}</div>
+                    </div>
+                </div>
+                <span class="current-badge">Current</span>
+            </div>
+
+            <div style="margin-top:14px;display:flex;gap:10px;">
+                <button onclick="location.href='{% url 'dashboard_logout' %}'" style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:9px;border:1px solid rgba(255,23,68,0.35);background:rgba(255,23,68,0.07);color:var(--danger-color);font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">
+                    <i class='bx bx-log-out'></i> Sign Out
+                </button>
+            </div>
+        </div>
+
+        <!-- Login History -->
+        <div class="sec-card fade-in" style="animation-delay:0.12s;">
+            <div class="sec-card-title">
+                <i class='bx bx-history' style="color:var(--warning-color);font-size:22px;"></i>
+                Login History
+            </div>
+            <p class="sec-card-sub">Recent sign-in and security events for your account.</p>
+
+            {% if login_logs %}
+            <div>
+                {% for log in login_logs %}
+                <div class="log-row">
+                    <div class="log-dot {{ log.action }}"></div>
+                    <div class="log-body">
+                        <div class="log-action">{{ log.action }}</div>
+                        <div class="log-desc">{{ log.description }}</div>
+                        {% if log.ip_address %}
+                        <div style="font-size:11px;color:var(--text-muted);font-family:monospace;">{{ log.ip_address }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="log-time">{{ log.created_at|date:'M d, Y · H:i' }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align:center;padding:32px 0;color:var(--text-muted);">
+                <i class='bx bx-history' style="font-size:40px;display:block;margin-bottom:10px;"></i>
+                No login history yet. It will appear after your next sign in.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Security Score -->
+        <div class="sec-card fade-in" style="animation-delay:0.18s;">
+            <div class="sec-card-title">
+                <i class='bx bxs-shield' style="color:var(--accent-color);font-size:22px;"></i>
+                Security Score
+            </div>
+            <p class="sec-card-sub">How well your account is protected.</p>
+
+            <div style="display:flex;align-items:center;gap:20px;margin-bottom:18px;">
+                <div style="width:80px;height:80px;border-radius:50%;background:conic-gradient(var(--accent-color) 180deg, var(--border-color) 0deg);display:flex;align-items:center;justify-content:center;position:relative;" id="score-ring">
+                    <div style="width:60px;height:60px;border-radius:50%;background:var(--card-color);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--accent-color);" id="score-num">50</div>
+                </div>
+                <div>
+                    <div style="font-size:15px;font-weight:700;" id="score-label">Fair</div>
+                    <div style="font-size:12px;color:var(--text-secondary);">Improve by enabling 2FA and using a strong password</div>
+                </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;">
+                    <span style="color:var(--text-secondary);">Strong Password</span>
+                    <span style="color:var(--success-color);font-weight:700;">✓ Detected</span>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;">
+                    <span style="color:var(--text-secondary);">Two-Factor Auth</span>
+                    <span style="color:var(--danger-color);font-weight:700;" id="twofa-check">✗ Disabled</span>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;">
+                    <span style="color:var(--text-secondary);">Email Verified</span>
+                    <span style="color:{% if request.user.is_email_verified %}var(--success-color){% else %}var(--warning-color){% endif %};font-weight:700;">{% if request.user.is_email_verified %}✓ Yes{% else %}⚠ No{% endif %}</span>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;">
+                    <span style="color:var(--text-secondary);">Last Password Change</span>
+                    <span style="color:var(--text-muted);">Check logs above</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+/* ── Password toggle ── */
+function togglePw(id, btn) {
+    const inp  = document.getElementById(id);
+    const icon = btn.querySelector('i');
+    inp.type  = inp.type === 'password' ? 'text' : 'password';
+    icon.className = inp.type === 'password' ? 'bx bx-hide' : 'bx bx-show';
+}
+
+/* ── Password strength ── */
+function evalPassword(pw) {
+    const len = pw.length >= 8;
+    const up  = /[A-Z]/.test(pw);
+    const num = /[0-9]/.test(pw);
+    const sym = /[^A-Za-z0-9]/.test(pw);
+    const score = [len, up, num, sym].filter(Boolean).length;
+
+    const setRule = (id, pass) => {
+        const el = document.getElementById(id);
+        el.className = pass ? 'pass' : 'fail';
+        el.querySelector('i').className = pass ? 'bx bx-check' : 'bx bx-x';
+    };
+    setRule('rule-len', len);
+    setRule('rule-up',  up);
+    setRule('rule-num', num);
+    setRule('rule-sym', sym);
+
+    const colors = ['', '#FF1744', '#FF9800', '#FFEB3B', '#C4963D', '#00C853'];
+    const labels = ['', 'Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+    const pcts   = ['', '20%', '40%', '60%', '80%', '100%'];
+
+    const fill  = document.getElementById('str-fill');
+    const label = document.getElementById('str-label');
+    fill.style.width      = pw ? pcts[score] : '0%';
+    fill.style.background = colors[score];
+    label.textContent     = pw ? labels[score] : 'Enter a password to check strength';
+    label.style.color     = colors[score] || 'var(--text-muted)';
+
+    /* score segments */
+    for(let i=1;i<=4;i++){
+        const seg = document.getElementById('seg'+i);
+        seg.style.background = i<=score ? colors[score] : 'var(--border-color)';
+    }
+    checkMatch();
+}
+
+/* ── Password match ── */
+function checkMatch() {
+    const np = document.getElementById('new-pw').value;
+    const cp = document.getElementById('conf-pw').value;
+    const ml = document.getElementById('match-label');
+    if(!cp) { ml.textContent=''; return; }
+    if(np===cp) {
+        ml.textContent='✓ Passwords match';
+        ml.style.color='var(--success-color)';
+    } else {
+        ml.textContent='✗ Passwords do not match';
+        ml.style.color='var(--danger-color)';
+    }
+}
+
+/* ── 2FA toggle (UI only) ── */
+let twoFAEnabled = false;
+function toggle2FA() {
+    twoFAEnabled = !twoFAEnabled;
+    const btn  = document.getElementById('twofa-btn');
+    const text = document.getElementById('twofa-status-text');
+    const chk  = document.getElementById('twofa-check');
+    if(twoFAEnabled) {
+        btn.textContent='Disable'; btn.className='twofa-toggle twofa-off';
+        text.textContent='Currently enabled';
+        chk.textContent='✓ Enabled'; chk.style.color='var(--success-color)';
+    } else {
+        btn.textContent='Enable'; btn.className='twofa-toggle twofa-on';
+        text.textContent='Currently disabled';
+        chk.textContent='✗ Disabled'; chk.style.color='var(--danger-color)';
+    }
+}
+
+/* ── Device info ── */
+document.addEventListener('DOMContentLoaded', function(){
+    const ua = navigator.userAgent;
+    let os = 'Unknown OS', browser = 'Unknown Browser';
+    if(/Windows/.test(ua)) os='Windows';
+    else if(/Mac/.test(ua)) os='macOS';
+    else if(/Linux/.test(ua)) os='Linux';
+    else if(/Android/.test(ua)) os='Android';
+    else if(/iOS/.test(ua)) os='iOS';
+
+    if(/Chrome/.test(ua) && !/Edg/.test(ua)) browser='Chrome';
+    else if(/Firefox/.test(ua)) browser='Firefox';
+    else if(/Safari/.test(ua) && !/Chrome/.test(ua)) browser='Safari';
+    else if(/Edg/.test(ua)) browser='Edge';
+
+    document.getElementById('device-info').textContent = `${os} · ${browser}`;
+});
+</script>
+{% endblock %}

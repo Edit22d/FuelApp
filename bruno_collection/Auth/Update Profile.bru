@@ -1,0 +1,23 @@
+meta {
+  name: Update Profile
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/auth/profile/update/
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "full_name": "Admin User",
+    "email": "admin@fuelconnect.com",
+    "location": "Kampala Center"
+  }
+}
